@@ -1,0 +1,29 @@
+# Local projects, credentials, media, model weights and test output
+data/
+workspace*.json
+prompt-logs.json
+
+# Dependencies and generated files
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.playwright-mcp/
+
+# Local secrets and configuration
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
+
+# Logs, temporary files and editor state
+*.log
+*.tmp
+*.bak
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {runPipeline,updatePipelineProgress} from '../src/pipeline.mjs';
+import {taskLanes,jobForLane} from '../public/render-spec.js';
+const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return {promise,resolve,reject}};
+test('字幕完成立即并行启动三条线路，视频先就绪且其它失败不取消结果',async()=>{const asr=deferred(),copy=deferred(),cover=deferred(),p={id:'p',subtitles:[]},j={id:'j',projectId:'p',type:'pipeline',status:'running'},jobs=new Map([['j',j]]),started=[];
+ const pending=runPipeline({project:p,job:j,jobs,save:async()=>{},transcribe:async()=>{await asr.promise;p.subtitles=[{text:'文稿'}]},copy:()=>{started.push('copy');return copy.promise},cover:()=>{started.push('cover');return cover.promise},compose:async()=>{started.push('export');return {url:'/ready.mp4'}}});
+ await Promise.resolve();assert.deepEqual(started,[]);asr.resolve();await new Promise(r=>setTimeout(r,0));assert.deepEqual(started,['copy','cover','export']);assert.equal(j.stages.export.status,'done');assert.equal(j.result.url,'/ready.mp4');assert.ok(taskLanes(j).includes('copy'));assert.ok(taskLanes(j).includes('coverVertical'));assert.ok(!taskLanes(j).includes('export'));assert.equal(jobForLane(j,'export').status,'done');
+ copy.reject(new Error('LLM 失败'));await new Promise(r=>setTimeout(r,0));assert.equal(j.stages.cover.status,'running');assert.equal(j.stages.copy.status,'error');cover.resolve();await assert.rejects(pending,/LLM 失败/);assert.equal(j.stages.cover.status,'done');assert.equal(j.result.url,'/ready.mp4');updatePipelineProgress(j);assert.ok(j.progress<=99);
+});
+test('识别失败阻止依赖文稿的步骤，避免生成无依据结果',async()=>{const p={id:'p',subtitles:[]},j={id:'j',type:'pipeline',status:'running'},jobs=new Map([['j',j]]),never=()=>assert.fail('不应启动后续任务');await assert.rejects(runPipeline({project:p,job:j,jobs,save:async()=>{},transcribe:async()=>{throw new Error('识别失败')},copy:never,cover:never,compose:never}),/识别失败/);assert.equal(j.stages.export.status,'blocked');assert.equal(j.stages.copy.status,'blocked')});

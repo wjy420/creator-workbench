@@ -1,0 +1,22 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {createPromptLogs} from '../src/prompt-logs.mjs';
+test('实际请求内容完整保存，支持并行、状态回写、重读和密钥脱敏',async()=>{
+ const folder=path.resolve('data/prompt-log-tests',crypto.randomUUID());await fs.mkdir(folder,{recursive:true});
+ const key='sk-test-only-secret-123456',sent=[];
+ const remote=async(base,endpoint,apiKey,body,form,onResponse)=>{sent.push(body);onResponse(body.prompt==='fail'?503:200);await new Promise(r=>setTimeout(r,20));if(body.prompt==='fail')throw new Error('Upstream failed Bearer '+key);return {choices:[{message:{content:'最终输出 '+key,reasoning_content:'不记录中间推理'}}]}};
+ const make=()=>createPromptLogs({directory:()=>folder,remote,secrets:()=>[key]});const logs=make(),p={id:'test'};
+ const body={model:'model-test',messages:[{role:'system',content:'系统指令'},{role:'user',content:'完整文稿'.repeat(20000)+key}],stream:false};
+ const result=await Promise.allSettled([logs.request(p,{id:'one'},{category:'copy'},'https://user:pass-secret@provider.example/v1?api_key=secret','/chat/completions',key,body),logs.request(p,{id:'two'},{category:'cover',slot:'vertical'},'https://provider.example/v1','/images/generations',key,{model:'image-test',size:'720x1280',n:1,prompt:'fail'})]);
+ assert.equal(result[0].status,'fulfilled');assert.equal(result[1].status,'rejected');assert.equal(sent[0],body);assert.ok(body.messages[1].content.includes(key),'日志不得修改实际发送的原文');
+ const metadata=await logs.list(p);assert.equal(metadata.total,2);assert.ok(metadata.entries.every(x=>x.requestBody===undefined&&x.responseOutput===undefined));
+ const copy=(await logs.list(p,{category:'copy'})).entries[0],detail=await logs.detail(p,copy.id);assert.equal(detail.requestBody.messages[1].content,'完整文稿'.repeat(20000)+'[已隐藏]');assert.equal(detail.status,'done');assert.equal(detail.httpStatus,200);assert.ok(detail.durationMs>=0);
+ assert.equal(detail.responseOutput.messages[0].content,'最终输出 [已隐藏]');assert.equal(detail.responseOutput.messages[0].reasoning_content,undefined);assert.equal(copy.hasResponseOutput,true);
+ const error=(await logs.list(p,{category:'cover'})).entries[0];assert.equal(error.slot,'vertical');assert.equal(error.status,'error');assert.equal(error.httpStatus,503);assert.ok(!error.error.includes(key));
+ const disk=await fs.readFile(path.join(folder,'prompt-logs.json'),'utf8');assert.ok(!disk.includes(key));assert.ok(!disk.includes('pass-secret'));assert.ok(!disk.includes('api_key=secret'));assert.equal((await make().list(p)).total,2);
+ const stored=JSON.parse(disk);stored.push({id:'unfinished',category:'copy',status:'running',requestBody:{model:'test',messages:[]}});await fs.writeFile(path.join(folder,'prompt-logs.json'),JSON.stringify(stored));
+ const reloaded=make(),page=await reloaded.list(p,{limit:1,offset:1});assert.equal(page.total,3);assert.equal(page.entries.length,1);assert.equal((await reloaded.detail(p,'unfinished')).status,'interrupted');assert.match((await reloaded.detail(p,'unfinished')).error,/中断/);assert.equal(JSON.parse(await fs.readFile(path.join(folder,'prompt-logs.json'),'utf8')).find(x=>x.id==='unfinished').status,'interrupted');
+});
