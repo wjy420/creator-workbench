@@ -20,6 +20,7 @@ export async function buildProjectBundle(p,folder,output){const entries=[],missi
  const addFile=async(name,record)=>{if(!record){missing.push(name);return}let filename=record.file;try{if(!filename){const parts=new URL(record.url,'http://localhost').pathname.split('/');if(parts[1]!=='media'||parts[2]!==p.id||parts.length!==4)throw new Error('无效文件地址');filename=decodeURIComponent(parts[3])}if(!filename||path.basename(filename)!==filename||filename.includes('..'))throw new Error('无效文件名');const handle=await fs.open(path.join(folder,filename),'r');entries.push({name,handle})}catch(e){if(e.code==='ENOENT'){missing.push(name+'（文件已删除）');return}throw e}};
  try{await addFile('最终视频.mp4',p.output);
   if(p.subtitles?.length)text('最终字幕.srt',toSrt(p.subtitles),true);else missing.push('最终字幕.srt');
+  if(p.chapters?.length)text('章节.json',JSON.stringify({chapters:p.chapters},null,2));
   if(p.copy?.platforms?.length){text('平台标题和简介.txt',p.copy.platforms.map(x=>`${x.platform}\n标题：${x.title}\n简介：${x.description}\n${(x.tags||[]).join(' ')}\n`).join('\n────────────\n\n'),true);text('平台文案.json',JSON.stringify({platforms:p.copy.platforms},null,2))}else missing.push('平台标题和简介');
   await addFile('横版封面.png',p.cover?.horizontal|| (p.cover?.horizontalUrl?{url:p.cover.horizontalUrl}:null));await addFile('竖版封面.png',p.cover?.vertical|| (p.cover?.verticalUrl?{url:p.cover.verticalUrl}:null));
   if(p.cover?.url&&!p.cover.horizontal&&!p.cover.horizontalUrl&&!p.cover.vertical&&!p.cover.verticalUrl)await addFile('封面组合图.png',{url:p.cover.url});

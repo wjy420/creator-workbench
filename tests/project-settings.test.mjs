@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {defaults} from '../public/render-spec.js';
 import {applyProjectSettings,matchesPreset} from '../src/project-settings.mjs';
-const preset={id:'preset',config:{...defaults,bitrateKbps:4500,coverVerticalResolution:'2K'},musicId:'music-a'};
+const preset={id:'preset',config:{...defaults,bitrateKbps:4500,coverVerticalResolution:'2K',chapterLineLength:36,chapterLineWidth:3,chapterOffset:32},musicId:'music-a'};
 const options={presets:[preset,{id:'silent',config:defaults}],chooseMusic:async(p,id)=>{for(const key of ['music','musicName','musicId'])delete p[key];if(id)Object.assign(p,{music:'copy-'+id,musicName:id,musicId:id})}};
 test('选择预设完整应用服务端参数和音乐，不接受客户端的局部覆盖',async()=>{const p={config:{...defaults,fontSize:99},music:'other',musicId:'other'};await applyProjectSettings(p,{presetId:'preset',config:defaults,musicId:'other'},options);assert.deepEqual(p.config,preset.config);assert.equal(p.musicId,'music-a');assert.equal(p.presetId,'preset');await applyProjectSettings(p,{presetId:'silent'},options);assert.deepEqual(p.config,defaults);assert.equal(p.music,undefined);assert.equal(p.presetId,'silent')});
 test('逐项修改、切换配乐或取消配乐成为自定义，重新选预设恢复',async()=>{const p={config:defaults};for(const body of [{config:{...preset.config,fontSize:100}},{musicId:'music-b'},{musicId:null},{config:{...preset.config,coverVerticalRatio:'1:1'}}]){await applyProjectSettings(p,{presetId:'preset'},options);await applyProjectSettings(p,body,options);assert.equal(p.presetId,null)}await applyProjectSettings(p,{presetId:'preset'},options);assert.equal(p.presetId,'preset');assert.ok(matchesPreset(p,preset))});

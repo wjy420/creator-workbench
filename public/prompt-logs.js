@@ -1,10 +1,10 @@
 const promptLogStates=new Map();
 function promptLogState(projectId,category){const key=projectId+':'+category;if(!promptLogStates.has(key))promptLogStates.set(key,{key,projectId,category,open:false,offset:0,total:0,entries:[],expanded:new Set(),raw:new Set(),details:new Map(),detailErrors:new Map(),loading:false,lastFetch:0,error:'',version:0});return promptLogStates.get(key)}
-const promptLogLabel=entry=>entry.category==='copy'?'文案':entry.stage==='planning'?'封面提示词策划 · LLM':entry.slot==='horizontal'?'横版封面 · 生图':entry.slot==='vertical'?'竖版封面 · 生图':'封面';
+const promptLogLabel=entry=>entry.category==='chapters'?'章节推断 · LLM':entry.category==='copy'?'文案':entry.stage==='planning'?'封面提示词策划 · LLM':entry.slot==='horizontal'?'横版封面 · 生图':entry.slot==='vertical'?'竖版封面 · 生图':'封面';
 const promptLogStatus=entry=>({running:'请求中',done:'请求完成',error:'请求失败',interrupted:'未完成'})[entry.status]||entry.status;
 function promptLogTime(value){return new Date(value).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function promptLogDuration(ms){return ms==null?'':ms<1000?ms+' ms':(ms/1000).toFixed(1)+' 秒'}
-function renderPromptLogs(){if(currentView!=='work'||!p())return;for(const category of ['copy','cover']){const root=document.getElementById(category+'PromptLogs');if(root)renderPromptLog(root,promptLogState(p().id,category))}}
+function renderPromptLogs(){if(currentView!=='work'||!p())return;for(const category of ['copy','cover','chapters']){const root=document.getElementById(category+'PromptLogs');if(root)renderPromptLog(root,promptLogState(p().id,category))}}
 function renderPromptLog(root,st){
  if(root.dataset.logKey!==st.key){root.dataset.logKey=st.key;root.innerHTML=`<button class="prompt-log-toggle" aria-expanded="false" aria-controls="${st.category}PromptLogBody"><span><svg><use href="#sliders"/></svg>提示词日志</span><span class="prompt-log-toggle-meta"><i></i><svg><use href="#chevron"/></svg></span></button><div class="prompt-log-body hidden" id="${st.category}PromptLogBody"></div>`;root.querySelector('.prompt-log-toggle').onclick=()=>{st.open=!st.open;if(!st.open)clearTimeout(st.timer);renderPromptLog(root,st);if(st.open)fetchPromptLogPage(st,true)}}
  root.querySelector('.prompt-log-toggle').setAttribute('aria-expanded',st.open);root.querySelector('.prompt-log-toggle-meta i').textContent=st.lastFetch?`${st.total} 次请求`:'查看实际发送内容';const body=root.querySelector('.prompt-log-body');body.classList.toggle('hidden',!st.open);if(!st.open)return;

@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import {runPipeline,updatePipelineProgress} from '../src/pipeline.mjs';
 import {taskLanes,jobForLane} from '../public/render-spec.js';
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return {promise,resolve,reject}};
+test('章节与文案、封面并行，视频等待章节；章节失败仍合成',async()=>{
+ for(const fails of [false,true]){const gate=deferred(),p={id:'p',subtitles:[{text:'文稿'}]},j={id:'j',projectId:'p',type:'pipeline',status:'running'},started=[];
+  const pending=runPipeline({project:p,job:j,jobs:new Map([['j',j]]),save:async()=>{},chapters:()=>{started.push('chapters');return gate.promise},copy:async()=>started.push('copy'),cover:async()=>started.push('cover'),compose:async()=>{started.push('export');return {url:'/ready.mp4'}}});
+  await new Promise(r=>setTimeout(r,0));assert.deepEqual(started,['chapters','copy','cover']);assert.equal(j.stages.export.status,'waiting');assert.ok(taskLanes(j).includes('chapters'));
+  if(fails){gate.reject(new Error('模拟章节失败'));await assert.rejects(pending,/模拟章节失败/);assert.equal(j.stages.chapters.status,'error')}else{gate.resolve();await pending;assert.equal(j.stages.chapters.status,'done')}
+  assert.equal(started.at(-1),'export');assert.equal(j.stages.export.status,'done');assert.equal(j.result.url,'/ready.mp4');
+ }
+});
 test('字幕完成立即并行启动三条线路，视频先就绪且其它失败不取消结果',async()=>{const asr=deferred(),copy=deferred(),cover=deferred(),p={id:'p',subtitles:[]},j={id:'j',projectId:'p',type:'pipeline',status:'running'},jobs=new Map([['j',j]]),started=[];
  const pending=runPipeline({project:p,job:j,jobs,save:async()=>{},transcribe:async()=>{await asr.promise;p.subtitles=[{text:'文稿'}]},copy:()=>{started.push('copy');return copy.promise},cover:()=>{started.push('cover');return cover.promise},compose:async()=>{started.push('export');return {url:'/ready.mp4'}}});
  await Promise.resolve();assert.deepEqual(started,[]);asr.resolve();await new Promise(r=>setTimeout(r,0));assert.deepEqual(started,['copy','cover','export']);assert.equal(j.stages.export.status,'done');assert.equal(j.result.url,'/ready.mp4');assert.ok(taskLanes(j).includes('copy'));assert.ok(taskLanes(j).includes('coverVertical'));assert.ok(!taskLanes(j).includes('export'));assert.equal(jobForLane(j,'export').status,'done');

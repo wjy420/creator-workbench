@@ -1,7 +1,16 @@
 // Shared source-pixel geometry for browser previews and FFmpeg exports.
 export const referenceSubtitleStyle={subtitleColor:'#65efb3',subtitleOutlineWidth:0,subtitleBackgroundEnabled:true,subtitleBackgroundColor:'#000000',subtitleBackgroundOpacity:100,subtitleBackgroundPadding:18,subtitleBackgroundRadius:16};
-export const defaults={barEnabled:true,barColor:'#648bff',barOpacity:100,barBackgroundColor:'#ffffff',barBackgroundOpacity:35,barHeight:4,barMargin:48,subtitleEnabled:true,fontSize:42,subtitleColor:'#ffffff',subtitleOutlineColor:'#202020',subtitleOutlineWidth:2,subtitleBackgroundEnabled:false,subtitleBackgroundColor:'#000000',subtitleBackgroundOpacity:65,subtitleBackgroundPadding:8,subtitleMargin:110,maxChars:18,musicEnabled:true,musicVolume:15,ducking:true,fadeIn:1.5,fadeOut:2,bitrateKbps:3000,resolution:'1080p',coverHorizontalResolution:'1K',coverHorizontalRatio:'16:9',coverVerticalResolution:'1K',coverVerticalRatio:'9:16',...referenceSubtitleStyle};
+export const defaults={chapterEnabled:true,chapterFontSize:24,chapterColor:'#ffffff',chapterLineLength:24,chapterLineWidth:1.5,chapterOffset:20,barEnabled:true,barColor:'#648bff',barOpacity:100,barBackgroundColor:'#ffffff',barBackgroundOpacity:35,barHeight:4,barMargin:48,subtitleEnabled:true,fontSize:42,subtitleColor:'#ffffff',subtitleOutlineColor:'#202020',subtitleOutlineWidth:2,subtitleBackgroundEnabled:false,subtitleBackgroundColor:'#000000',subtitleBackgroundOpacity:65,subtitleBackgroundPadding:8,subtitleMargin:110,maxChars:18,musicEnabled:true,musicVolume:15,ducking:true,fadeIn:1.5,fadeOut:2,bitrateKbps:3000,resolution:'1080p',coverHorizontalResolution:'1K',coverHorizontalRatio:'16:9',coverVerticalResolution:'1K',coverVerticalRatio:'9:16',...referenceSubtitleStyle};
 export function barLayout(p,c){const margin=c.barMargin;return {x:margin,y:p.height-margin-c.barHeight,width:Math.max(0,p.width-2*margin),height:c.barHeight}}
+export function chapterLayout(p,c){
+ const bar=barLayout(p,c),fontSize=c.chapterFontSize,y=bar.y-c.chapterOffset,lineWidth=c.chapterLineWidth;
+ return (p.chapters||[]).map(chapter=>{
+  const left=bar.x+bar.width*chapter.start/p.duration,right=bar.x+bar.width*chapter.end/p.duration;
+  const text=chapter.title.replace(/[{}\\\r\n]/g,'');
+  const units=Array.from(text).reduce((n,ch)=>n+(/[\u0000-\u007f]/.test(ch)?0.6:1),0);
+  return {...chapter,text,left,right,x:(left+right)/2,y,fontSize,scaleX:Math.min(100,Math.max(1,(right-left-8-lineWidth)/Math.max(1,units*fontSize)*100)),lineTop:y-c.chapterLineLength/2,lineBottom:y+c.chapterLineLength/2,lineWidth};
+ });
+}
 export function assColor(hex,opacity=100){const alpha=Math.round(255*(1-opacity/100)).toString(16).padStart(2,'0');return '&H'+alpha+hex.slice(5,7)+hex.slice(3,5)+hex.slice(1,3)}
 export function rgba(hex,opacity=100){return `rgba(${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)},${(255-Math.round(255*(1-opacity/100)))/255})`}
 export function subtitleLines(text,maxChars){const clean=text.replace(/[{}\\]/g,'').replace(/\r/g,'');return clean.split('\n').flatMap(line=>{const chars=Array.from(line);const out=[];for(let i=0;i<chars.length;i+=maxChars)out.push(chars.slice(i,i+maxChars).join(''));return out}).join('\\N')}
@@ -22,9 +31,14 @@ export function coverSize(resolution,ratio){
   '4K':{'16:9':[3840,2160],'9:16':[2160,3840],'4:3':[3264,2448],'3:4':[2448,3264],'1:1':[2880,2880]}
  };const [width,height]=sizes[resolution][ratio];return {width,height};
 }
+// Keep active work and the latest composition visible when another lane finishes.
+export function visibleProjectJobs(jobs,projectId){
+ const all=jobs.filter(job=>job.projectId===projectId),composition=all.findLast(job=>job.type==='export'||job.type==='pipeline'),finished=all.findLast(job=>job.status!=='running');
+ return all.filter(job=>job.status==='running'||job===composition||job===finished).sort((a,b)=>a===composition?-1:b===composition?1:(b.createdAt||0)-(a.createdAt||0));
+}
 export function requestTaskLanes(type,slot){
  if(type==='cover')return slot==='horizontal'?['coverHorizontal']:slot==='vertical'?['coverVertical']:['cover','coverHorizontal','coverVertical'];
- return ['copy','transcribe','export','pipeline'].includes(type)?[type]:[];
+ return ['copy','chapters','transcribe','export','pipeline'].includes(type)?[type]:[];
 }
 export function taskLanes(job){
  if(job.status!=='running')return [];

@@ -1,4 +1,4 @@
-import {defaults,barLayout,assColor,subtitleLines} from '../public/render-spec.js';
+import {defaults,barLayout,chapterLayout,assColor,subtitleLines} from '../public/render-spec.js';
 export {defaults};
 const stamp=(n,sep=',')=>{const ms=Math.round(n*1000);return `${String(Math.floor(ms/3600000)).padStart(2,'0')}:${String(Math.floor(ms/60000)%60).padStart(2,'0')}:${String(Math.floor(ms/1000)%60).padStart(2,'0')}${sep}${String(ms%1000).padStart(3,'0')}`};
 export function toSrt(segments){return segments.map((s,i)=>`${i+1}\n${stamp(s.start)} --> ${stamp(s.end)}\n${s.text}\n`).join('\n')}
@@ -14,6 +14,11 @@ if(c.barEnabled){const {x,y,width,height}=barLayout(p,c),right=x+width;const sha
 event(0,0,p.duration,`{\\an7\\pos(0,0)\\bord0\\shad0${paint(c.barBackgroundColor,c.barBackgroundOpacity)}\\p1}${shape}`);
 event(1,0,p.duration,`{\\an7\\pos(0,0)\\bord0\\shad0${paint(c.barColor,c.barOpacity)}\\clip(${x},${y},${x},${y+height})\\t(0,${Math.round(p.duration*1000)},\\clip(${x},${y},${right},${y+height}))\\p1}${shape}`);
 }
+if(c.chapterEnabled){const boundaries=new Set();for(const chapter of chapterLayout(p,c)){
+ const {left,right,x,y,fontSize,scaleX,lineTop,lineBottom,lineWidth,text}=chapter;
+ event(2,0,p.duration,`{\\an5\\pos(${x},${y})\\fs${fontSize}\\fscx${scaleX}\\bord1.2\\shad0\\1c&H${assColor(c.chapterColor).slice(4)}&\\1a&H00&\\3c&H000000&\\clip(${Math.round(left)},0,${Math.round(right)},${h})\\q2}${text}`);
+ for(const [time,edge] of [[chapter.start,left],[chapter.end,right]])if(lineWidth>0&&lineBottom>lineTop&&time>0&&time<p.duration&&!boundaries.has(time)){boundaries.add(time);event(4,0,p.duration,`{\\an7\\pos(0,0)\\bord0\\shad0${paint(c.chapterColor,100)}\\p1}m ${edge-lineWidth/2} ${lineTop} l ${edge+lineWidth/2} ${lineTop} ${edge+lineWidth/2} ${lineBottom} ${edge-lineWidth/2} ${lineBottom}`);}
+}}
 if(c.subtitleEnabled){for(const s of p.subtitles||[]){const text='{\\q2}'+subtitleLines(s.text,c.maxChars);event(3,s.start,s.end,text)}}
 return out;
 }

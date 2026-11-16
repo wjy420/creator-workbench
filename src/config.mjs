@@ -23,12 +23,12 @@ export function validateConfig(input){
   if(integer&&!Number.isInteger(n))throw new Error(`${label}请输入整数`);
   c[key]=n;
  };
- for(const [key,label] of [['bitrateKbps','视频码率（kbps）'],['fontSize','字号']])number(key,label,{positive:true});
- for(const [key,label] of [['barHeight','进度条高度'],['subtitleOutlineWidth','描边粗细'],['subtitleBackgroundPadding','背景内边距'],['subtitleBackgroundRadius','背景圆角'],['fadeIn','淡入'],['fadeOut','淡出']])number(key,label,{nonnegative:true});
- for(const [key,label] of [['barMargin','进度条边距'],['subtitleMargin','字幕边距']])number(key,label);
+ for(const [key,label] of [['bitrateKbps','视频码率（kbps）'],['fontSize','字号'],['chapterFontSize','章节字号']])number(key,label,{positive:true});
+ for(const [key,label] of [['chapterLineLength','分割线长度'],['chapterLineWidth','分割线粗细'],['barHeight','进度条高度'],['subtitleOutlineWidth','描边粗细'],['subtitleBackgroundPadding','背景内边距'],['subtitleBackgroundRadius','背景圆角'],['fadeIn','淡入'],['fadeOut','淡出']])number(key,label,{nonnegative:true});
+ for(const [key,label] of [['chapterOffset','章节垂直偏移'],['barMargin','进度条边距'],['subtitleMargin','字幕边距']])number(key,label);
  number('maxChars','每行字数',{positive:true,integer:true});
  for(const key of ['barOpacity','barBackgroundOpacity','subtitleBackgroundOpacity'])number(key,'不透明度',{percent:true});
  number('musicVolume','音乐音量',{nonnegative:true});
- for(const key of ['barColor','barBackgroundColor','subtitleColor','subtitleOutlineColor','subtitleBackgroundColor'])if(!/^#[0-9a-f]{6}$/i.test(c[key]))throw new Error('颜色请填写 #RRGGBB');
+ for(const key of ['chapterColor','barColor','barBackgroundColor','subtitleColor','subtitleOutlineColor','subtitleBackgroundColor'])if(!/^#[0-9a-f]{6}$/i.test(c[key]))throw new Error('颜色请填写 #RRGGBB');
  return c;
 }

@@ -27,6 +27,7 @@
 | `server.mjs` | HTTP 路由、持久化、任务管理、模型调用及 FFmpeg 合成流程 |
 | `src/config.mjs`、`src/settings.mjs` | 参数校验、旧配置兼容、API 与语音设置合并 |
 | `public/render-spec.js` | 前后端共享的默认参数、尺寸计算、字幕规则和任务线路定义 |
+| `src/chapters.mjs`、`public/chapters.js` | 章节推断、时间校验及章节编辑与预览 |
 | `src/media.mjs`、`src/preview.mjs`、`src/subtitle-background.mjs` | SRT / ASS、字幕透明图层及背景渲染 |
 | `src/encoding.mjs` | 视频码率编码参数与实测码率 |
 | `src/pipeline.mjs` | 一键处理依赖、并行调度和阶段状态 |
@@ -66,7 +67,8 @@ node tests/parallel-pipeline.mjs
 | 文案、封面与接口日志 | `node tests/api-integration.mjs`，相关 `cover-plan`、`prompt-logs` 单元测试 |
 | 密钥保存 | `node tests/key-persistence.mjs` |
 | 预设、音乐、导出记录 | `node tests/library-integration.mjs`，`tests/project-settings.test.mjs` |
-| 任务线路、一键处理 | `node tests/concurrent-tasks.mjs`、`node tests/parallel-pipeline.mjs` |
+| 章节生成、编辑与显示 | `tests/chapters.test.mjs`、`node tests/chapters-integration.mjs` |
+| 任务线路、一键处理 | `node tests/concurrent-tasks.mjs`、`node tests/parallel-pipeline.mjs`、`node tests/job-feedback-integration.mjs` |
 | 播放器 | `tests/media-playback.test.mjs`、`tests/player.test.mjs` |
 | 项目结果打包 | `tests/project-bundle.test.mjs` |
 
@@ -79,8 +81,9 @@ node tests/parallel-pipeline.mjs
 - **共享参数和旧数据兼容**：默认值与尺寸规则优先维护在 `public/render-spec.js`，校验在 `src/config.mjs`。参数变更同时检查项目保存、预设、前端输入、合成快照及迁移。码率字段使用 `bitrateKbps`；旧 Mbps 字段由现有迁移逻辑处理。
 - **字幕一致性**：预览与导出复用相同字幕透明图层和布局规则，不能各自实现一套排版。修改字体、背景、断行或位置时同时验证两端。
 - **画幅与码率**：导出保留原比例，预设分辨率按短边缩放，H.264 尺寸取偶数。字号、码率等沿用现有有效性校验，不随意增加人工上限。展示真实探测到的尺寸和码率。
-- **任务并行**：字幕、文案、横版封面、竖版封面、合成按线路防重复，不因单路任务禁用整个项目。Whisper 保持串行队列，避免模型进程争用资源。
-- **一键处理**：已有文稿直接复用；文稿准备完成后，文案、封面及合成并行执行。封面不等待新文案、不使用旧文案作为本次流程的依赖。单路失败保留其余成功结果，视频完成即可下载。
+- **任务并行**：字幕、文案、横版封面、竖版封面、合成按线路防重复，不因单路任务禁用整个项目。Whisper 保持串行队列，避免模型进程争用资源。 任务区保留全部运行中任务与最近合成结果；单路完成反馈不得覆盖合成进度或重建无关参数、播放器。
+- **章节**：单独识别只更新字幕，章节通过独立按钮生成；一键处理按依赖联动。复用文案模型，按完整带时间戳文稿推断；名称及时间可编辑，不重叠且不超出视频。章节预览和导出共用 ASS 图层；异步生成不能覆盖更新后的文稿或章节。
+- **一键处理**：已有文稿直接复用；文稿准备完成后，文案、封面及视频线路并行执行。开启章节且尚无章节时，视频线路先生成章节再合成；已有章节直接复用，章节失败仍继续合成。封面不等待新文案、不使用旧文案作为本次流程的依赖。单路失败保留其余成功结果，视频完成即可下载。
 - **合成快照**：合成使用任务启动时的参数、字幕与配乐快照，运行中后续编辑用于下一次任务。异步任务完成不能覆盖用户之后输入的创作方向。
 - **横竖封面**：完整生成先策划并校验共同规范及两版提示词，再分别生图；单张重试复用该版方案或当前编辑内容，不额外调用策划模型。防止旧方案覆盖新方案，并保留另一版的成功结果。
 - **预设与播放状态**：预设应用整套参数及配乐，实际偏离时标记自定义。同项目刷新、任务完成和参数修改应保留播放器与配乐节点；正常取消播放意图不应弹出 AbortError。

@@ -46,13 +46,14 @@
  <section class="workspace" id="editView">
   <div class="control-column">
    <header class="panel-heading"><div><h1>作品设置</h1><span>参数与发布内容，统一管理</span></div><span class="autosave-mark">自动保存</span></header>
-   <nav class="section-nav" aria-label="功能快捷定位"><button data-section="sourceSection">文稿</button><button data-section="subtitleSection">字幕</button><button data-section="barSection">进度条</button><button data-section="musicSection">配乐</button><button data-section="copySection">文案</button><button data-section="coverSection">封面生成</button></nav>
+   <nav class="section-nav" aria-label="功能快捷定位"><button data-section="sourceSection">文稿</button><button data-section="subtitleSection">字幕</button><button data-section="chapterSection">章节</button><button data-section="barSection">进度条</button><button data-section="musicSection">配乐</button><button data-section="copySection">文案</button><button data-section="coverSection">封面生成</button></nav>
    <div class="control-scroll">
     <section id="sourceSection" class="source-section"><div class="section-title"><h2>视频文稿</h2><span>本地 Whisper</span></div><div class="timeline"></div><div class="transcript"><div class="row"></div><p></p></div></section>
     <div class="inspector"></div>
+    <div class="control-group-heading publishing-group-heading"><h2>发布素材</h2><span>文案与封面</span></div>
     <section id="copySection" class="workflow-section copy-workflow">
      <div class="page-heading"><div class="section-title"><h2>文案</h2><span class="mini-chip">尚未识别文稿</span></div><p></p></div>
-     <div class="prompt-area"><label for="creativePrompt">自定义创作方向 <span class="optional-label">选填</span></label><textarea id="creativePrompt" rows="3" class="control-input" aria-label="文案创作方向" aria-describedby="copyDirectionHelp" placeholder="例如：面向自媒体新手，突出本地处理和实际用法；标题有吸引力，简介用一句话介绍视频内容。"></textarea><p class="copy-direction-help" id="copyDirectionHelp">同时用于标题和简介；留空则根据视频内容自动生成。简介默认只写一句简短介绍。</p><button class="btn primary" id="generateCopy">生成标题和简介</button><div id="copyGenerationStatus" class="copy-generation-status hidden" role="status" aria-live="polite" aria-atomic="true"></div></div>
+     <div class="prompt-area"><label for="creativePrompt">自定义创作方向 <span class="optional-label">选填</span></label><textarea id="creativePrompt" rows="3" class="control-input" aria-label="文案创作方向" aria-describedby="copyDirectionHelp" placeholder="例如：面向自媒体新手，突出本地处理和实际用法；标题有吸引力，简介用一句话介绍视频内容。"></textarea><p class="copy-direction-help" id="copyDirectionHelp">同时用于标题和简介；留空则根据视频内容自动生成。简介默认只写一句简短介绍。</p><button class="btn primary generation-button" id="generateCopy">生成标题和简介</button><div id="copyGenerationStatus" class="copy-generation-status hidden" role="status" aria-live="polite" aria-atomic="true"></div></div>
      <div id="copyPromptLogs" class="prompt-log-host"></div>
       <div class="copy-section"><div class="block-heading"><h2>平台文案</h2><button class="text-button">导出全部</button></div>
        <div class="platforms"><button class="chosen">抖音</button><button>视频号</button><button>小红书</button><button>B站</button></div>
@@ -65,7 +66,7 @@
      <div class="section-title"><h2>封面生成</h2><span>横版 ＋ 竖版</span></div>
      <p class="workflow-description">先策划风格统一的横竖版提示词，再生成两张封面。</p>
      <div class="cover-prompt-area"><label for="coverPrompt">封面方向</label><textarea id="coverPrompt" rows="3" class="control-input" aria-label="封面方向" placeholder="选填：描述画面、配色或视觉风格，留空则根据文案自动创作"></textarea><div id="coverSettings" class="cover-settings-grid"></div></div>
-     <div class="cover-generation-action"><button id="generateCover" class="btn primary"><svg><use href="#spark"/></svg>生成封面</button><div id="coverGenerationStatus" class="copy-generation-status hidden" role="status" aria-live="polite" aria-atomic="true"></div></div>
+     <div class="cover-generation-action"><button id="generateCover" class="btn primary generation-button"><svg><use href="#spark"/></svg>生成封面</button><div id="coverGenerationStatus" class="copy-generation-status hidden" role="status" aria-live="polite" aria-atomic="true"></div></div>
      <div id="coverPromptLogs" class="prompt-log-host"></div>
      <div class="cover-results"></div><div class="cover-notes"></div><div class="footer-info"></div>
     </section>
@@ -89,5 +90,6 @@
 <script src="/library.js"></script>
 <script src="/prompt-logs.js"></script><script src="/cover-prompts.js"></script>
 <script src="/pipeline-panel.js"></script>
+<script src="/chapters.js"></script>
 <script src="/app.js"></script>
 </body></html>

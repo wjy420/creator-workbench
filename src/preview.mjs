@@ -7,10 +7,12 @@ import {addSubtitleBackground} from './subtitle-background.mjs';
 export const filterPath=file=>file.replace(/\\/g,'/').replace(/:/g,'\\:').replace(/'/g,"'\\''");
 const rendering=new Map();let queue=Promise.resolve();
 // Render transparent subtitle pixels using exactly the same ASS and libass as export.
-export async function subtitlePreview(project,indices,folder,run){
- const c={...defaults,...project.config,barEnabled:false};
+export function subtitlePreview(project,indices,folder,run){return overlayPreview(project,indices,folder,run,false)}
+export function chapterPreview(project,folder,run){return overlayPreview(project,[],folder,run,true)}
+async function overlayPreview(project,indices,folder,run,chapters){
+ const c={...defaults,...project.config,barEnabled:false,...(chapters?{subtitleEnabled:false,subtitleBackgroundEnabled:false}:{chapterEnabled:false})};
  const subtitles=indices.map(i=>project.subtitles[i]).filter(Boolean).map(s=>({...s,start:0,end:1}));
- const ass=makeAss({...project,duration:1,subtitles},c);
+ const ass=makeAss({...project,duration:chapters?project.duration:1,subtitles},c);
  const hash=crypto.createHash('sha256').update('rounded-background-v1'+ass+JSON.stringify([c.subtitleBackgroundEnabled,c.subtitleBackgroundColor,c.subtitleBackgroundOpacity,c.subtitleBackgroundPadding,c.subtitleBackgroundRadius])).digest('hex').slice(0,32);
  const out=path.join(folder,`subtitle-preview-${hash}.png`);
  try{await fs.access(out);return out}catch{}
